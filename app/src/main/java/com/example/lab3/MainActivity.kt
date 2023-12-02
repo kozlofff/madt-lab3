@@ -11,6 +11,7 @@ class MainActivity : ComponentActivity() {
     private var currentInput = ""
     private var currentOperator = ""
     private var firstOperand = 0.0
+    private var isCalculationCompleted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -18,91 +19,118 @@ class MainActivity : ComponentActivity() {
 
         textViewDisplay = findViewById(R.id.textView)
 
-        val button0 : Button = findViewById(R.id.button26)
-        val button1 : Button = findViewById(R.id.button21)
-        val button2 : Button = findViewById(R.id.button22)
-        val button3 : Button = findViewById(R.id.button23)
-        val button4 : Button = findViewById(R.id.button16)
-        val button5 : Button = findViewById(R.id.button17)
-        val button6 : Button = findViewById(R.id.button18)
-        val button7 : Button = findViewById(R.id.button11)
-        val button8 : Button = findViewById(R.id.button12)
-        val button9 : Button = findViewById(R.id.button13)
-
-        setNumberButtonClickListeners(button0)
-        setNumberButtonClickListeners(button1)
-        setNumberButtonClickListeners(button2)
-        setNumberButtonClickListeners(button3)
-        setNumberButtonClickListeners(button4)
-        setNumberButtonClickListeners(button5)
-        setNumberButtonClickListeners(button6)
-        setNumberButtonClickListeners(button7)
-        setNumberButtonClickListeners(button8)
-        setNumberButtonClickListeners(button9)
-
-        val buttonEquals = findViewById<Button>(R.id.button25)
-        buttonEquals.setOnClickListener {
-            performCalculation()
-        }
-
-        val buttonPlus : Button = findViewById(R.id.button28)
-        val buttonMinus : Button = findViewById(R.id.button24)
-        val buttonMultiply : Button = findViewById(R.id.button19)
-        val buttonDivision : Button = findViewById(R.id.button14)
-
-        setOperatorClickListeners(buttonPlus, "+")
-        setOperatorClickListeners(buttonMinus, "-")
-        setOperatorClickListeners(buttonMultiply, "*")
-        setOperatorClickListeners(buttonDivision, "/")
-
-        val buttonSquareRoot = findViewById<Button>(R.id.button10)
-        buttonSquareRoot.setOnClickListener {
-            performSquareRoot()
-        }
+        setupNumberButtons()
+        setupOperatorButtons()
+        setupSpecialButtons()
     }
+    private fun setupNumberButtons() {
+        val numberButtons = listOf<Button>(
+            findViewById(R.id.button26), findViewById(R.id.button21),
+            findViewById(R.id.button22), findViewById(R.id.button23),
+            findViewById(R.id.button16), findViewById(R.id.button17),
+            findViewById(R.id.button18), findViewById(R.id.button11),
+            findViewById(R.id.button12), findViewById(R.id.button13)
+        )
 
-    private fun setNumberButtonClickListeners(button: Button) {
-        button.setOnClickListener {
-            val buttonText = button.text.toString()
-            currentInput += buttonText
-            updateDisplay(currentInput)
-        }
-    }
-
-    private fun setOperatorClickListeners(button: Button, operator: String) {
-        button.setOnClickListener {
-            if (currentInput.isNotEmpty()) {
-                if (currentOperator.isNotEmpty()) {
-                    performCalculation()
-                } else {
-                    firstOperand = currentInput.toDouble()
-                    currentInput = ""
-                }
-                currentOperator = operator
+        numberButtons.forEach { button ->
+            button.setOnClickListener {
+                appendToCurrentInput(button.text.toString())
+                updateDisplay()
             }
         }
+    }
+
+    private fun setupOperatorButtons() {
+        val operatorButtons = listOf<Button>(
+            findViewById(R.id.button28), findViewById(R.id.button24),
+            findViewById(R.id.button19), findViewById(R.id.button14)
+        )
+
+        operatorButtons.forEach { button ->
+            button.setOnClickListener {
+                handleOperatorButtonClick(button.text.toString())
+                updateDisplay()
+            }
+        }
+    }
+
+    private fun setupSpecialButtons() {
+        val specialButtons = listOf<Button>(
+            findViewById(R.id.button10), findViewById(R.id.button25),
+            findViewById(R.id.button6), findViewById(R.id.button7),
+            findViewById(R.id.button8), findViewById(R.id.button9)
+        )
+
+        specialButtons.forEach { button ->
+            button.setOnClickListener {
+                handleSpecialButtonClick(button.text.toString())
+                updateDisplay()
+            }
+        }
+    }
+
+    private fun appendToCurrentInput(value: String) {
+        if (isCalculationCompleted) {
+            currentInput = value
+            isCalculationCompleted = false
+        } else {
+            currentInput += value
+        }
+    }
+
+    private fun handleOperatorButtonClick(operator: String) {
+        if (currentInput.isNotEmpty()) {
+            if (currentOperator.isNotEmpty()) {
+                return
+            } else {
+                firstOperand = currentInput.toDouble()
+                currentInput = ""
+            }
+            currentOperator = operator
+        }
+    }
+
+    private fun handleSpecialButtonClick(value: String) {
+        when (value) {
+            "√" -> performSquareRoot()
+            "=" -> performCalculation()
+            "←" -> performBackspace()
+            "CE" -> clearEntry()
+            "C" -> clearAll()
+            "±" -> toggleSign()
+        }
+        updateDisplay()
     }
 
     private fun performCalculation() {
         if (currentInput.isNotEmpty() && currentOperator.isNotEmpty()) {
-            val secondOperand = currentInput.toDouble()
-            when (currentOperator) {
-                "+" -> firstOperand += secondOperand
-                "-" -> firstOperand -= secondOperand
-                "*" -> firstOperand *= secondOperand
-                "/" -> {
-                    if (secondOperand != 0.0) {
-                        firstOperand /= secondOperand
-                    } else {
-                        updateDisplay("Unknown error")
-                        return
+            try {
+                val secondOperand = currentInput.toDouble()
+                when (currentOperator) {
+                    "+" -> firstOperand += secondOperand
+                    "-" -> firstOperand -= secondOperand
+                    "*" -> firstOperand *= secondOperand
+                    "/" -> {
+                        if (secondOperand != 0.0) {
+                            firstOperand /= secondOperand
+                        } else {
+                            handleCalculationError()
+                            return
+                        }
                     }
                 }
+                currentInput = ""
+                currentOperator = ""
+                isCalculationCompleted = true
+            } catch (e: NumberFormatException) {
+                handleCalculationError()
             }
-            updateDisplay(firstOperand.toString())
-            currentInput = ""
-            currentOperator = ""
         }
+    }
+
+    private fun handleCalculationError() {
+        currentInput = "Error"
+        isCalculationCompleted = true
     }
 
     private fun performSquareRoot() {
@@ -110,15 +138,47 @@ class MainActivity : ComponentActivity() {
             val number = currentInput.toDouble()
             if (number >= 0) {
                 val result = sqrt(number)
-                updateDisplay(result.toString())
                 currentInput = result.toString()
             } else {
-                updateDisplay("Unknown error")
+                currentInput = "Error"
             }
         }
     }
 
-    private fun updateDisplay(text: String) {
-        textViewDisplay.text = text
+    private fun performBackspace() {
+        if (currentInput.isNotEmpty()) {
+            currentInput = currentInput.substring(0, currentInput.length - 1)
+        }
     }
+
+    private fun clearEntry() {
+        currentInput = ""
+    }
+
+    private fun clearAll() {
+        currentInput = ""
+        currentOperator = ""
+        firstOperand = 0.0
+    }
+
+    private fun toggleSign() {
+        if (currentInput.isNotEmpty() && currentInput != "0") {
+            currentInput = if (currentInput.startsWith("-")) {
+                currentInput.substring(1)
+            } else {
+                "-$currentInput"
+            }
+        }
+    }
+
+    private fun updateDisplay() {
+        val displayText = when {
+            currentInput.isNotEmpty() && currentOperator.isNotEmpty() -> "$currentOperator $currentInput"
+            currentInput.isNotEmpty() -> currentInput
+            else -> firstOperand.toString()
+        }
+        textViewDisplay.text = displayText
+    }
+
+
 }
